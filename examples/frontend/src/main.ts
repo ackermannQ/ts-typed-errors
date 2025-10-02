@@ -1,4 +1,4 @@
-import { defineError, matchErrorOf, wrap } from '../../src';
+import { defineError, matchErrorOf, wrap } from '../../../src';
 
 const NetworkError = defineError('NetworkError')<{ status: number; url: string }>();
 const ParseError   = defineError('ParseError')<{ at: string }>();
@@ -26,8 +26,8 @@ document.getElementById('btn-200')!.addEventListener('click', async () => {
   const res = await getJsonSafe('https://httpbin.org/json');
   if (!res.ok) {
     const handled = matchErrorOf<Err>(res.error)
-      .with(NetworkError, (e) => ({ kind: 'retry', to: e.data.url }))
-      .with(ParseError,   (e) => ({ kind: 'report', at: e.data.at }))
+      .with(NetworkError, (e: InstanceType<typeof NetworkError>) => ({ kind: 'retry', to: e.data.url }))
+      .with(ParseError,   (e: InstanceType<typeof ParseError>) => ({ kind: 'report', at: e.data.at }))
       .exhaustive();
     log(handled);
     return;
@@ -39,8 +39,8 @@ document.getElementById('btn-404')!.addEventListener('click', async () => {
   const res = await getJsonSafe('https://httpstat.us/404');
   if (!res.ok) {
     const handled = matchErrorOf<Err>(res.error)
-      .with(NetworkError, (e) => ({ kind: 'retry', to: e.data.url }))
-      .with(ParseError,   (e) => ({ kind: 'report', at: e.data.at }))
+      .with(NetworkError, (e: InstanceType<typeof NetworkError>) => ({ kind: 'retry', to: e.data.url }))
+      .with(ParseError,   (e: InstanceType<typeof ParseError>) => ({ kind: 'report', at: e.data.at }))
       .exhaustive();
     log(handled);
     return;
@@ -53,8 +53,8 @@ document.getElementById('btn-badjson')!.addEventListener('click', async () => {
   const res = await getJsonSafe('https://httpbin.org/html');
   if (!res.ok) {
     const handled = matchErrorOf<Err>(res.error)
-      .with(NetworkError, (e) => ({ kind: 'retry', to: e.data.url }))
-      .with(ParseError,   (e) => ({ kind: 'report', at: e.data.at }))
+      .with(NetworkError, (e: InstanceType<typeof NetworkError>) => ({ kind: 'retry', to: e.data.url }))
+      .with(ParseError,   (e: InstanceType<typeof ParseError>) => ({ kind: 'report', at: e.data.at }))
       .exhaustive();
     log(handled);
     return;

@@ -4,31 +4,24 @@ import { baseMatcher } from './base';
 /** Free-form matcher; must end with otherwise() */
 export function matchError(e: unknown) {
   const m = baseMatcher();
-  return {
-    with<T>(ctorOrGuard: ErrorCtor<any> | Guard<any>, handler: (e: HandlerInput<T>) => any) {
-      m.with(ctorOrGuard, handler);
-      return {
-        with: m.with,
-        when: m.when,
-        otherwise<R>(handler: (e: unknown) => R) {
-          return m._otherwise(e, handler);
-        },
-      };
-    },
-    when(pred: (e: any) => boolean, handler: (e: any) => any) {
-      m.when(pred, handler);
-      return {
-        with: m.with,
-        when: m.when,
-        otherwise<R>(handler: (e: unknown) => R) {
-          return m._otherwise(e, handler);
-        },
-      };
-    },
-    otherwise<R>(handler: (e: unknown) => R) {
-      return m._otherwise(e, handler);
-    },
-  };
+  
+  function createChain() {
+    return {
+      with<T>(ctorOrGuard: ErrorCtor<any> | Guard<any>, handler: (e: HandlerInput<T>) => any) {
+        m.with(ctorOrGuard, handler);
+        return createChain();
+      },
+      when(pred: (e: any) => boolean, handler: (e: any) => any) {
+        m.when(pred, handler);
+        return createChain();
+      },
+      otherwise<R>(handler: (e: unknown) => R) {
+        return m._otherwise(e, handler);
+      },
+    };
+  }
+  
+  return createChain();
 }
 
 /** Infer the input type of a handler constraint */
