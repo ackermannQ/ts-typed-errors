@@ -10,8 +10,17 @@ type Err =
 const out = document.getElementById('out')! as HTMLPreElement;
 const log = (x: any) => { out.textContent = JSON.stringify(x, null, 2); console.log(x); };
 
+// Helper function to convert native fetch errors to NetworkError
+async function safeFetch(url: string): Promise<Response> {
+  try {
+    return await fetch(url);
+  } catch (e) {
+    throw new NetworkError(`Network error: ${e instanceof Error ? e.message : String(e)}`, { status: 0, url });
+  }
+}
+
 async function getJson(url: string) {
-  const r = await fetch(url);
+  const r = await safeFetch(url);
   if (!r.ok) throw new NetworkError(`HTTP ${r.status}`, { status: r.status, url });
   try {
     return await r.json();
@@ -24,6 +33,7 @@ const getJsonSafe = wrap(getJson);
 
 document.getElementById('btn-200')!.addEventListener('click', async () => {
   const res = await getJsonSafe('https://httpbin.org/json');
+  log(res);
   if (!res.ok) {
     const handled = matchErrorOf<Err>(res.error)
       .with(NetworkError, (e: InstanceType<typeof NetworkError>) => ({ kind: 'retry', to: e.data.url }))
