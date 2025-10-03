@@ -251,9 +251,6 @@ ts-typed-errors is built around these core concepts:
 - [Examples](./docs/guide/examples.md)
 - [Why ts-typed-errors?](./docs/guide/why.md)
 
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) and submit pull requests to our [GitHub repository](https://github.com/ackermannQ/ts-typed-errors).
 
 ## 📄 License
 
