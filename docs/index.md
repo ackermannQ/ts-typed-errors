@@ -240,10 +240,6 @@ ts-typed-errors is built around these core concepts:
 - **Exhaustive Matching**: Compiler-enforced error handling
 - **Zero Dependencies**: Works in any TypeScript environment
 
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) and submit pull requests to our [GitHub repository](https://github.com/ackermannQ/ts-typed-errors).
-
 ## 📄 License
 
 MIT © [Quentin Ackermann](https://github.com/ackermannQ)
