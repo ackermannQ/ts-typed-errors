@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
+  base: '/ts-typed-errors/', 
   title: 'ts-typed-errors',
   description: 'Exhaustive error matching for TypeScript',
   themeConfig: {
