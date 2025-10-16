@@ -473,5 +473,5 @@ This roadmap is subject to change based on:
 - Performance considerations
 
 **Last updated:** October 16, 2025
-**Current version:** v0.0.6
+**Current version:** v0.3.0
 

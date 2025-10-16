@@ -34,14 +34,17 @@ if (!res.ok) {
 
 - **🎯 Exhaustive matching** - TypeScript enforces that you handle all error types
 - **🔧 Ergonomic API** - Declarative `matchError` / `matchErrorOf` chains with:
+  - `.map()` for error transformation
   - `.select()` for property extraction
   - `.withAny()` for matching multiple types
   - `.withNot()` for negation patterns
   - `.when()` for predicate matching
-- **📦 Tiny & fast** - ~2 kB, zero dependencies, works everywhere
+- **📦 Tiny & fast** - ~5 kB, zero dependencies, O(1) tag-based matching
 - **🛡️ Type-safe** - Full TypeScript support with strict type checking
 - **🔄 Result pattern** - Convert throwing functions to `Result<T, E>` types
-- **🔨 Composable guards** - Reusable type guards with `isErrorOf()`
+- **🔨 Composable guards** - Reusable type guards with `isErrorOf()`, `isAnyOf()`, `isAllOf()`
+- **⚡ Async support** - Native async/await with `matchErrorAsync()` and `matchErrorOfAsync()`
+- **💾 Serialization** - JSON serialization with `serialize()`, `deserialize()`, `toJSON()`, `fromJSON()`
 
 ## 🚀 Quick Start
 
