@@ -33,7 +33,7 @@ if (!res.ok) {
 ## ✨ Features
 
 - **🎯 Exhaustive matching** - TypeScript enforces that you handle all error types
-- **🔧 Ergonomic API** - Declarative `matchError` / `matchErrorOf` chains
+- **🔧 Ergonomic API** - Declarative `matchError` / `matchErrorOf` chains with `.select()` for property extraction
 - **📦 Tiny & fast** - ~1–2 kB, zero dependencies, works everywhere
 - **🛡️ Type-safe** - Full TypeScript support with strict type checking
 - **🔄 Result pattern** - Convert throwing functions to `Result<T, E>` types
@@ -167,6 +167,34 @@ const message = matchErrorOf<AllErrors>(error)
   .with(ParseError, e => `Parse: ${e.data.at}`)
   .exhaustive(); // ✅ Compiler error if any case missing
 ```
+
+### Advanced Matching
+
+#### `.select(constructor, key, handler)`
+Extract and match on specific properties from error data directly.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number; url: string }>();
+const ParseError = defineError('ParseError')<{ at: string }>();
+
+// Extract specific property instead of full error object
+matchErrorOf<Err>(error)
+  .select(NetworkError, 'status', (status) => `Status code: ${status}`)
+  .select(ParseError, 'at', (location) => `Parse failed at: ${location}`)
+  .exhaustive();
+
+// Mix with regular .with() handlers
+matchError(error)
+  .select(NetworkError, 'status', (status) => status > 400 ? 'client error' : 'ok')
+  .with(ParseError, (e) => `Parse error at ${e.data.at}`)
+  .otherwise(() => 'unknown');
+```
+
+**Benefits:**
+- Cleaner handler signatures
+- Direct access to needed properties
+- Type-safe property extraction
+- Works with exhaustive matching
 
 ### Utility Functions
 

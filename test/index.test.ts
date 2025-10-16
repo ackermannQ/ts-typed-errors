@@ -35,6 +35,45 @@ describe('matchError', () => {
   });
 });
 
+describe('select', () => {
+  it('extracts property from error data in matchError', () => {
+    const e = new Net('oops', { status: 404, url: '/api/users' });
+    const out = matchError(e)
+      .select(Net, 'status', (status) => `Status code: ${status}`)
+      .otherwise(() => 'fallback');
+    expect(out).toBe('Status code: 404');
+  });
+
+  it('extracts property from error data in matchErrorOf', () => {
+    const e = new Parse('bad', { at: 'line 42' });
+    const out = matchErrorOf<Err>(e)
+      .select(Net, 'url', (url) => `URL: ${url}`)
+      .select(Parse, 'at', (at) => `Parse error at ${at}`)
+      .with(Auth, () => 'auth')
+      .exhaustive();
+    expect(out).toBe('Parse error at line 42');
+  });
+
+  it('works with exhaustive matching', () => {
+    const e = new Auth('forbidden', { reason: 'forbidden' });
+    const out = matchErrorOf<Err>(e)
+      .select(Net, 'status', (status) => `Status: ${status}`)
+      .select(Parse, 'at', (at) => `At: ${at}`)
+      .select(Auth, 'reason', (reason) => `Auth reason: ${reason}`)
+      .exhaustive();
+    expect(out).toBe('Auth reason: forbidden');
+  });
+
+  it('can be mixed with with()', () => {
+    const e = new Net('error', { status: 500, url: '/api' });
+    const out = matchError(e)
+      .select(Net, 'status', (status) => status > 400 ? 'error' : 'ok')
+      .with(Auth, (err) => `auth: ${err.data.reason}`)
+      .otherwise(() => 'fallback');
+    expect(out).toBe('error');
+  });
+});
+
 describe('wrap', () => {
   it('captures errors', async () => {
     const f = wrap(async () => { throw new Net('x', { status: 500, url: '/x' }); });
