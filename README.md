@@ -208,6 +208,36 @@ const result = await matchErrorOfAsync<AllErrors>(error)
 
 ### Advanced Matching
 
+#### `.map(transform)`
+Transform the error before matching against it. Useful for normalizing errors or adding context.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number; url: string }>();
+const ParseError = defineError('ParseError')<{ at: string }>();
+
+// Normalize errors by adding a timestamp
+matchErrorOf<Err>(error)
+  .map(e => {
+    (e as any).timestamp = Date.now();
+    return e;
+  })
+  .with(NetworkError, e => `Network error at ${(e as any).timestamp}`)
+  .with(ParseError, e => `Parse error at ${(e as any).timestamp}`)
+  .exhaustive();
+
+// Extract nested errors
+matchError(wrappedError)
+  .map(e => (e as any).cause ?? e)
+  .with(NetworkError, e => `Root cause: ${e.data.status}`)
+  .otherwise(() => 'Unknown error');
+```
+
+**Benefits:**
+- Error normalization across different sources
+- Extract nested/wrapped errors
+- Add contextual information
+- Works with both exhaustive and non-exhaustive matching
+
 #### `.select(constructor, key, handler)`
 Extract and match on specific properties from error data directly.
 

@@ -21,9 +21,14 @@ import { baseMatcher, baseAsyncMatcher } from './base';
  */
 export function matchError(e: unknown) {
   const m = baseMatcher();
+  let transformedError = e;
 
   function createChain() {
     return {
+      map(transform: (e: unknown) => unknown) {
+        transformedError = transform(transformedError);
+        return createChain();
+      },
       with<T>(ctorOrGuard: ErrorCtor<any> | Guard<any>, handler: (e: HandlerInput<T>) => any) {
         m.with(ctorOrGuard, handler);
         return createChain();
@@ -49,7 +54,7 @@ export function matchError(e: unknown) {
         return createChain();
       },
       otherwise<R>(handler: (e: unknown) => R) {
-        return m._otherwise(e, handler);
+        return m._otherwise(transformedError, handler);
       },
     };
   }
@@ -112,6 +117,14 @@ export type SelectValue<T, K extends string> = ErrorData<T> extends Record<K, in
  * @template Left - The remaining unhandled error types
  */
 export interface Matcher<Left> {
+  /**
+   * Transforms the error before matching.
+   *
+   * @param transform - Function to transform the error
+   * @returns The same matcher with the transformed error
+   */
+  map(transform: (e: unknown) => unknown): any;
+
   /**
    * Matches an error using a constructor or guard function.
    *
@@ -213,8 +226,14 @@ export type Next<Left, T> = Exclude<Left, HandlerInput<T>>;
  */
 export function matchErrorOf<All>(e: unknown): Matcher<All> {
   const m = baseMatcher<any>();
+  let transformedError = e;
+
   function api<L>(): Matcher<L> {
     return {
+      map(transform: (e: unknown) => unknown) {
+        transformedError = transform(transformedError);
+        return api<L>();
+      },
       with<T>(ctorOrGuard: any, handler: any) {
         m.with(ctorOrGuard, handler);
         return api<Next<L, T>>();
@@ -243,10 +262,10 @@ export function matchErrorOf<All>(e: unknown): Matcher<All> {
         return api<L>();
       },
       exhaustive(this: Matcher<never>) {
-        return m._exhaustive(e);
+        return m._exhaustive(transformedError);
       },
       otherwise<R>(handler: (e: unknown) => R) {
-        return m._otherwise(e, handler);
+        return m._otherwise(transformedError, handler);
       },
     };
   }
@@ -278,9 +297,14 @@ export function matchErrorOf<All>(e: unknown): Matcher<All> {
  */
 export function matchErrorAsync(e: unknown) {
   const m = baseAsyncMatcher();
+  let transformedError = e;
 
   function createChain() {
     return {
+      map(transform: (e: unknown) => unknown) {
+        transformedError = transform(transformedError);
+        return createChain();
+      },
       with<T>(ctorOrGuard: ErrorCtor<any> | Guard<any>, handler: (e: HandlerInput<T>) => Promise<any>) {
         m.with(ctorOrGuard, handler);
         return createChain();
@@ -306,7 +330,7 @@ export function matchErrorAsync(e: unknown) {
         return createChain();
       },
       otherwise<R>(handler: (e: unknown) => Promise<R>) {
-        return m._otherwise(e, handler);
+        return m._otherwise(transformedError, handler);
       },
     };
   }
@@ -345,8 +369,14 @@ export function matchErrorAsync(e: unknown) {
  */
 export function matchErrorOfAsync<All>(e: unknown): AsyncMatcher<All> {
   const m = baseAsyncMatcher<any>();
+  let transformedError = e;
+
   function api<L>(): AsyncMatcher<L> {
     return {
+      map(transform: (e: unknown) => unknown) {
+        transformedError = transform(transformedError);
+        return api<L>();
+      },
       with<T>(ctorOrGuard: any, handler: any) {
         m.with(ctorOrGuard, handler);
         return api<Next<L, T>>();
@@ -373,10 +403,10 @@ export function matchErrorOfAsync<All>(e: unknown): AsyncMatcher<All> {
         return api<L>();
       },
       exhaustive(this: AsyncMatcher<never>) {
-        return m._exhaustive(e);
+        return m._exhaustive(transformedError);
       },
       otherwise<R>(handler: (e: unknown) => Promise<R>) {
-        return m._otherwise(e, handler);
+        return m._otherwise(transformedError, handler);
       },
     };
   }
@@ -389,6 +419,7 @@ export function matchErrorOfAsync<All>(e: unknown): AsyncMatcher<All> {
  * @template Left - The remaining unhandled error types
  */
 export interface AsyncMatcher<Left> {
+  map(transform: (e: unknown) => unknown): any;
   with<T>(ctorOrGuard: ErrorCtor<any> | Guard<any>, handler: (e: HandlerInput<T>) => Promise<any>): any;
   withAny<T extends Error>(ctors: ErrorCtor<T>[], handler: (e: T) => Promise<any>): any;
   withNot<T extends Error>(ctors: ErrorCtor<T> | ErrorCtor<T>[], handler: (e: any) => Promise<any>): any;

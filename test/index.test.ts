@@ -543,6 +543,85 @@ describe('toJSON and fromJSON', () => {
   });
 });
 
+describe('map', () => {
+  it('transforms error before matching', () => {
+    const error = new Net('error', { status: 500, url: '/api' });
+
+    const result = matchError(error)
+      .map((e) => {
+        if (e instanceof Net) {
+          return new Net(e.message, { ...e.data, status: e.data.status + 1 });
+        }
+        return e;
+      })
+      .with(Net, (e) => `Status: ${e.data.status}`)
+      .otherwise(() => 'Other');
+
+    expect(result).toBe('Status: 501');
+  });
+
+  it('can chain multiple transformations', () => {
+    const error = new Net('error', { status: 100, url: '/api' });
+
+    const result = matchError(error)
+      .map((e) => e instanceof Net ? new Net(e.message, { ...e.data, status: e.data.status * 2 }) : e)
+      .map((e) => e instanceof Net ? new Net(e.message, { ...e.data, status: e.data.status + 50 }) : e)
+      .with(Net, (e) => e.data.status)
+      .otherwise(() => 0);
+
+    expect(result).toBe(250); // (100 * 2) + 50
+  });
+
+  it('works with exhaustive matching', () => {
+    const error = new Parse('error', { at: 'line 1' });
+
+    const result = matchErrorOf<Err>(error)
+      .map((e) => {
+        if (e instanceof Parse) {
+          return new Parse(e.message + ' (transformed)', { at: e.data.at + ':modified' });
+        }
+        return e;
+      })
+      .with(Net, () => 'network')
+      .with(Auth, () => 'auth')
+      .with(Parse, (e) => `${e.message} at ${e.data.at}`)
+      .exhaustive();
+
+    expect(result).toBe('error (transformed) at line 1:modified');
+  });
+
+  it('works with async matchers', async () => {
+    const error = new Net('error', { status: 404, url: '/api' });
+
+    const result = await matchErrorAsync(error)
+      .map((e) => e instanceof Net ? new Net('transformed', { ...e.data, status: 500 }) : e)
+      .with(Net, async (e) => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        return `Async status: ${e.data.status}`;
+      })
+      .otherwise(async () => 'Other');
+
+    expect(result).toBe('Async status: 500');
+  });
+
+  it('transformation applies before all matchers', () => {
+    const error = new Auth('error', { reason: 'expired' });
+    let transformCalled = false;
+
+    const result = matchError(error)
+      .map((e) => {
+        transformCalled = true;
+        return e;
+      })
+      .with(Net, () => 'network')
+      .with(Auth, () => 'auth')
+      .otherwise(() => 'other');
+
+    expect(transformCalled).toBe(true);
+    expect(result).toBe('auth');
+  });
+});
+
 describe('wrap', () => {
   it('captures errors', async () => {
     const f = wrap(async () => { throw new Net('x', { status: 500, url: '/x' }); });
