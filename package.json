@@ -1,6 +1,6 @@
 {
   "name": "ts-typed-errors",
-  "version": "0.0.5",
+  "version": "0.2.0",
   "description": "Exhaustive error matching utilities for TypeScript (defineError, matchError, matchErrorOf, wrap)",
   "type": "module",
   "sideEffects": false,

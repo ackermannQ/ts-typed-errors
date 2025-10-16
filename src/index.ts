@@ -3,7 +3,10 @@ export { wrap } from './core/wrap';
 
 export { defineError } from './errors/defineError';
 
-export { matchError, matchErrorOf } from './match/public';
-export type { Matcher, HandlerInput } from './match/public';
+export { matchError, matchErrorOf, matchErrorAsync, matchErrorOfAsync } from './match/public';
+export type { Matcher, AsyncMatcher, HandlerInput } from './match/public';
 
-export { isError, hasCode } from './utils/guards';
+export { isError, hasCode, isErrorOf, isAnyOf, isAllOf } from './utils/guards';
+
+export { serialize, deserialize, toJSON, fromJSON } from './utils/serialization';
+export type { SerializedError } from './utils/serialization';

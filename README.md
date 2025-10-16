@@ -33,10 +33,15 @@ if (!res.ok) {
 ## ✨ Features
 
 - **🎯 Exhaustive matching** - TypeScript enforces that you handle all error types
-- **🔧 Ergonomic API** - Declarative `matchError` / `matchErrorOf` chains with `.select()` for property extraction
-- **📦 Tiny & fast** - ~1–2 kB, zero dependencies, works everywhere
+- **🔧 Ergonomic API** - Declarative `matchError` / `matchErrorOf` chains with:
+  - `.select()` for property extraction
+  - `.withAny()` for matching multiple types
+  - `.withNot()` for negation patterns
+  - `.when()` for predicate matching
+- **📦 Tiny & fast** - ~2 kB, zero dependencies, works everywhere
 - **🛡️ Type-safe** - Full TypeScript support with strict type checking
 - **🔄 Result pattern** - Convert throwing functions to `Result<T, E>` types
+- **🔨 Composable guards** - Reusable type guards with `isErrorOf()`
 
 ## 🚀 Quick Start
 
@@ -168,6 +173,39 @@ const message = matchErrorOf<AllErrors>(error)
   .exhaustive(); // ✅ Compiler error if any case missing
 ```
 
+#### `matchErrorAsync(error)` & `matchErrorOfAsync<AllErrors>(error)`
+Async versions with native async/await support for all handlers.
+
+```ts
+// Free-form async matching
+const result = await matchErrorAsync(error)
+  .with(NetworkError, async (err) => {
+    await logToService(err);
+    return `Logged network error: ${err.data.status}`;
+  })
+  .with(ParseError, async (err) => {
+    await notifyAdmin(err);
+    return `Notified admin about parse error`;
+  })
+  .otherwise(async (err) => `Unknown error: ${err}`);
+
+// Exhaustive async matching
+const result = await matchErrorOfAsync<AllErrors>(error)
+  .with(NetworkError, async (err) => {
+    await retryRequest(err);
+    return 'retried';
+  })
+  .with(ValidationError, async (err) => {
+    await validateAndLog(err);
+    return 'validation';
+  })
+  .with(ParseError, async (err) => {
+    await fixData(err);
+    return 'fixed';
+  })
+  .exhaustive(); // ✅ All cases handled
+```
+
 ### Advanced Matching
 
 #### `.select(constructor, key, handler)`
@@ -196,6 +234,45 @@ matchError(error)
 - Type-safe property extraction
 - Works with exhaustive matching
 
+#### `.withAny(constructors, handler)`
+Match multiple error types with the same handler.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number }>();
+const TimeoutError = defineError('TimeoutError')<{ duration: number }>();
+const ParseError = defineError('ParseError')<{ at: string }>();
+
+matchErrorOf<Err>(error)
+  .withAny([NetworkError, TimeoutError], (e) => 'Connection issue - retry')
+  .with(ParseError, (e) => `Parse error at ${e.data.at}`)
+  .exhaustive();
+```
+
+**Benefits:**
+- DRY principle - avoid duplicating handlers
+- Group similar error types together
+- Cleaner code for common error handling
+
+#### `.withNot(constructor | constructors, handler)`
+Match all errors except the specified types.
+
+```ts
+// Exclude single type
+matchError(error)
+  .withNot(NetworkError, (e) => 'Not a network error')
+  .otherwise(() => 'Network error');
+
+// Exclude multiple types
+matchError(error)
+  .withNot([NetworkError, ParseError], (e) => 'Neither network nor parse error')
+  .otherwise((e) => 'Fallback');
+```
+
+**Benefits:**
+- Handle "everything except X" scenarios
+- Reduce boilerplate for common cases
+- More expressive API
+
 ### Utility Functions
 
 #### `isError(value)`
@@ -207,13 +284,133 @@ if (isError(value)) {
 }
 ```
 
-#### `hasCode(error, code)`
-Check if an error has a specific error code.
+#### `hasCode(code)`
+Creates a type guard for errors with a specific error code.
 
 ```ts
-if (hasCode(error, 'ENOTFOUND')) {
-  // Handle DNS error
+const isDNSError = hasCode('ENOTFOUND');
+const isPermissionError = hasCode('EACCES');
+
+if (isDNSError(error)) {
+  // Handle DNS error - TypeScript knows error.code is 'ENOTFOUND'
 }
+
+// Use in pattern matching
+matchError(error)
+  .with(hasCode('ENOTFOUND'), (err) => 'DNS lookup failed')
+  .with(hasCode('EACCES'), (err) => 'Permission denied')
+  .otherwise((err) => 'Other error');
+```
+
+#### `isErrorOf(constructor, predicate?)`
+Creates reusable type guards for specific error types with optional predicates.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number; url: string }>();
+
+// Simple type guard
+const isNetworkError = isErrorOf(NetworkError);
+if (isNetworkError(error)) {
+  console.log(error.data.status); // TypeScript knows this is NetworkError
+}
+
+// Type guard with predicate
+const isServerError = isErrorOf(NetworkError, (e) => e.data.status >= 500);
+const isClientError = isErrorOf(NetworkError, (e) => e.data.status >= 400 && e.data.status < 500);
+
+if (isServerError(error)) {
+  console.log(`Server error: ${error.data.status}`);
+}
+
+// Use in pattern matching
+matchError(error)
+  .with(isServerError, (e) => 'Retry server error')
+  .with(isClientError, (e) => 'Handle client error')
+  .otherwise(() => 'Other error');
+```
+
+#### `isAnyOf(error, constructors)`
+Checks if an error is an instance of any of the provided error constructors.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number }>();
+const TimeoutError = defineError('TimeoutError')<{ duration: number }>();
+
+if (isAnyOf(error, [NetworkError, TimeoutError])) {
+  // Handle connection-related errors
+  console.log('Connection issue detected');
+}
+
+// More concise than:
+if (error instanceof NetworkError || error instanceof TimeoutError) {
+  // ...
+}
+```
+
+#### `isAllOf(value, guards)`
+Checks if a value matches all of the provided type guards.
+
+```ts
+const NetworkError = defineError('NetworkError')<{ status: number; url: string }>();
+
+const isServerError = isErrorOf(NetworkError, (e) => e.data.status >= 500);
+const hasRetryableStatus = (e: unknown): e is any =>
+  isError(e) && 'status' in e && [502, 503, 504].includes((e as any).status);
+
+if (isAllOf(error, [isServerError, hasRetryableStatus])) {
+  // Error is both a server error AND has a retryable status
+  console.log('Retrying server error');
+}
+```
+
+### Serialization
+
+#### `serialize(error, includeStack?)`
+Serializes an error to a JSON-safe object for transmission or storage.
+
+```ts
+const error = new NetworkError('Request failed', { status: 500, url: '/api' });
+const serialized = serialize(error);
+// {
+//   tag: 'NetworkError',
+//   message: 'Request failed',
+//   name: 'NetworkError',
+//   data: { status: 500, url: '/api' },
+//   stack: '...'
+// }
+
+// Send over network
+await fetch('/api/log', {
+  method: 'POST',
+  body: JSON.stringify(serialized)
+});
+```
+
+#### `deserialize(serialized, constructors)`
+Deserializes a plain object back into an error instance.
+
+```ts
+// Receive from API
+const response = await fetch('/api/errors/123');
+const serialized = await response.json();
+
+// Deserialize with known constructors
+const error = deserialize(serialized, [NetworkError, ParseError]);
+
+if (error instanceof NetworkError) {
+  console.log(`Network error: ${error.data.status}`); // Type-safe!
+}
+```
+
+#### `toJSON(error)` & `fromJSON(json, constructors)`
+Convenience functions combining serialization with JSON stringify/parse.
+
+```ts
+// Convert to JSON string
+const json = toJSON(error);
+
+// Parse from JSON string
+const restored = fromJSON(json, [NetworkError, ParseError]);
 ```
 
 ## 🎯 Advanced Examples
